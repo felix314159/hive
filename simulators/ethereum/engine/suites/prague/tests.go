@@ -18,6 +18,13 @@ import (
 // Precalculate the first data gas cost increase
 var (
 	DATA_GAS_COST_INCREMENT_EXCEED_BLOBS = GetMinExcessBlobsForBlobGasPrice(2)
+	MAX_EXCESS_BLOBS_PER_BLOCK           = prague.MAX_BLOBS_PER_BLOCK - prague.TARGET_BLOBS_PER_BLOCK
+
+	// Number of full blocks needed to trigger a price increase
+	BLOCKS_NEEDED_FOR_PRICE_INCREASE = (DATA_GAS_COST_INCREMENT_EXCEED_BLOBS + MAX_EXCESS_BLOBS_PER_BLOCK - 1) / MAX_EXCESS_BLOBS_PER_BLOCK
+
+	// Geth only supports 7 blobs per transaction
+	GETH_MAX_BLOBS_PER_TRANSACTION = uint64(7)
 )
 
 func pUint64(v uint64) *uint64 {
@@ -38,15 +45,9 @@ var Tests = []test.Spec{
 
 			Verifications performed:
 			- Correct implementation of Engine API changes for Prague:
-			  - engine_newPayloadV3, engine_forkchoiceUpdatedV3, engine_getPayloadV3
-			- Correct implementation of EIP-4844:
-			  - Blob transaction ordering and inclusion
-			  - Blob transaction blob gas cost checks
-			  - Verify Blob bundle on built payload
-			- Eth RPC changes for Prague:
-			  - Blob fields in eth_getBlockByNumber
-			  - Beacon root in eth_getBlockByNumber
-			  - Blob fields in transaction receipts from eth_getTransactionReceipt
+			  - engine_newPayloadV4, engine_forkchoiceUpdatedV3, engine_getPayloadV4
+			- Correct implementation of EIP-7685:
+			  - General purpose execution layer requests
 			`,
 			MainFork: config.Prague,
 			// We fork after genesis
@@ -57,45 +58,48 @@ var Tests = []test.Spec{
 			// We are starting at Cancun genesis so send a couple payloads to reach the fork
 			NewPayloads{},
 
-			// First, we send a couple of blob transactions on genesis,
-			// with enough data gas cost to make sure they are included in the first block.
+			// First send a transaction to verify basic blob functionality
 			SendBlobTransactions{
-				TransactionCount:              prague.TARGET_BLOBS_PER_BLOCK,
+				TransactionCount:              1,
+				BlobsPerTransaction:           1,
 				BlobTransactionMaxBlobGasCost: big.NewInt(1),
 			},
-
-			// We create the first payload, and verify that the blob transactions
-			// are included in the payload.
-			// We also verify that the blob transactions are included in the blobs bundle.
 			NewPayloads{
-				ExpectedIncludedBlobCount: prague.TARGET_BLOBS_PER_BLOCK,
-				ExpectedBlobs:             helper.GetBlobList(0, prague.TARGET_BLOBS_PER_BLOCK),
-				
+				ExpectedIncludedBlobCount: 1,
+				ExpectedBlobs:             helper.GetBlobList(0, 1),
 			},
 
-			// Try to increase the data gas cost of the blob transactions
-			// by maxing out the number of blobs for the next payloads.
+			// Now send transactions to fill BLOCKS_NEEDED_FOR_PRICE_INCREASE blocks
+			// with the maximum number of blobs. Verify they are in the next payload/s.
 			SendBlobTransactions{
-				TransactionCount:              DATA_GAS_COST_INCREMENT_EXCEED_BLOBS/(prague.MAX_BLOBS_PER_BLOCK-prague.TARGET_BLOBS_PER_BLOCK) + 1,
-				BlobsPerTransaction:           prague.MAX_BLOBS_PER_BLOCK,
+				TransactionCount:              BLOCKS_NEEDED_FOR_PRICE_INCREASE * (prague.MAX_BLOBS_PER_BLOCK + GETH_MAX_BLOBS_PER_TRANSACTION - 1) / GETH_MAX_BLOBS_PER_TRANSACTION,
+				BlobsPerTransaction:           GETH_MAX_BLOBS_PER_TRANSACTION,
 				BlobTransactionMaxBlobGasCost: big.NewInt(1),
 			},
-
-			// Next payloads will have max data blobs each
 			NewPayloads{
-				PayloadCount:              DATA_GAS_COST_INCREMENT_EXCEED_BLOBS / (prague.MAX_BLOBS_PER_BLOCK - prague.TARGET_BLOBS_PER_BLOCK),
-				ExpectedIncludedBlobCount: prague.MAX_BLOBS_PER_BLOCK,
+				PayloadCount:              BLOCKS_NEEDED_FOR_PRICE_INCREASE,
+				ExpectedIncludedBlobCount: GETH_MAX_BLOBS_PER_TRANSACTION,
 			},
 
-			// But there will be an empty payload, since the data gas cost increased
-			// and the last blob transaction was not included.
+			// Now send a transaction with maxBlobGasCost of 1.
+			// This should get excluded in the next payload as prices have increased.
+			SendBlobTransactions{
+				TransactionCount:              1,
+				BlobsPerTransaction:           1,
+				BlobTransactionMaxBlobGasCost: big.NewInt(1),
+			},
 			NewPayloads{
 				ExpectedIncludedBlobCount: 0,
 			},
 
-			// But it will be included in the next payload
+			// With a higher gas price, the transaction should be included.
+			SendBlobTransactions{
+				TransactionCount:              1,
+				BlobsPerTransaction:           1,
+				BlobTransactionMaxBlobGasCost: big.NewInt(2), // Higher gas price
+			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: prague.MAX_BLOBS_PER_BLOCK,
+				ExpectedIncludedBlobCount: 1,
 			},
 		},
 	},
@@ -108,7 +112,7 @@ var Tests = []test.Spec{
 			Tests the Prague fork since genesis.
 
 			Verifications performed:
-			* See Blob Transactions On Block 1, Shanghai Genesis
+			* See Blob Transactions On Block 1, Cancun Genesis
 			`,
 			MainFork: config.Prague,
 		},
@@ -1777,7 +1781,7 @@ var Tests = []test.Spec{
 			},
 			// Peer with the client before sending txs
 			DevP2PClientPeering{
-				ClientIndex:        0,
+				ClientIndex: 0,
 			},
 			// Send a single blob transaction
 			SendBlobTransactions{
@@ -1807,7 +1811,7 @@ var Tests = []test.Spec{
 			},
 			// Peer with the client before sending txs
 			DevP2PClientPeering{
-				ClientIndex:        0,
+				ClientIndex: 0,
 			},
 			// Send multiple blob transaction
 			SendBlobTransactions{
