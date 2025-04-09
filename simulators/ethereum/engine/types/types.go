@@ -247,6 +247,7 @@ func ExecutableDataToBlock(ed ExecutableData) (*types.Block, error) {
 	return geth_beacon.ExecutableDataToBlock(gethEd, versionedHashes, ed.ParentBeaconBlockRoot)
 }
 
+/*
 // convertHexutilBytesToBytesSlice is a helper function for converting
 func convertHexutilBytesToBytesSlice(input []hexutil.Bytes) [][]byte {
     sliceOfBytes := make([][]byte, len(input))
@@ -255,3 +256,4 @@ func convertHexutilBytesToBytesSlice(input []hexutil.Bytes) [][]byte {
     }
     return sliceOfBytes
 }
+*/
