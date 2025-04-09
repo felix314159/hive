@@ -369,8 +369,6 @@ func (ec *HiveRPCEngineClient) GetPayload(ctx context.Context, version int, payl
 		panic("version not handled")
 	}
 
-
-	return executableData, blockValue, blobsBundle, shouldOverrideBuilder, requests, err
 }
 
 func (ec *HiveRPCEngineClient) GetPayloadV1(ctx context.Context, payloadId *api.PayloadID) (typ.ExecutableData, error) {

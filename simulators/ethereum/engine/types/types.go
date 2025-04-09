@@ -235,7 +235,7 @@ func FromBeaconExecutableData(ed *geth_beacon.ExecutableData) (ExecutableData, e
 	}, nil
 }
 
-func ExecutableDataToBlock(ed ExecutableData) (*types.Block, error) {
+func ExecutableDataToBlock(ed ExecutableData, requests [][]byte) (*types.Block, error) {
 	gethEd, err := ToBeaconExecutableData(&ed)
 	if err != nil {
 		return nil, err
@@ -244,7 +244,7 @@ func ExecutableDataToBlock(ed ExecutableData) (*types.Block, error) {
 	if ed.VersionedHashes != nil {
 		versionedHashes = *ed.VersionedHashes
 	}
-	return geth_beacon.ExecutableDataToBlock(gethEd, versionedHashes, ed.ParentBeaconBlockRoot)
+	return geth_beacon.ExecutableDataToBlock(gethEd, versionedHashes, ed.ParentBeaconBlockRoot, requests)
 }
 
 /*
