@@ -463,8 +463,12 @@ func (n *GethNode) NewPayloadV3(ctx context.Context, pl *typ.ExecutableData) (be
 	return resp, err
 }
 
-func (n *GethNode) NewPayloadV4(ctx context.Context, pl *typ.ExecutableData, requests [][]byte) (beacon.PayloadStatusV1, error) {
+func (n *GethNode) NewPayloadV4(ctx context.Context, pl *typ.ExecutableData, versionedHashes []common.Hash, beaconRoot *common.Hash, requests [][]byte) (beacon.PayloadStatusV1, error) {
+	pl.VersionedHashes = &versionedHashes
+	pl.ParentBeaconBlockRoot = beaconRoot
+	
 	n.latestPayloadSent = pl
+
 	ed, err := typ.ToBeaconExecutableData(pl)
 	if err != nil {
 		return beacon.PayloadStatusV1{}, err
@@ -472,7 +476,9 @@ func (n *GethNode) NewPayloadV4(ctx context.Context, pl *typ.ExecutableData, req
 	if pl.VersionedHashes == nil {
 		return beacon.PayloadStatusV1{}, fmt.Errorf("versioned hashes are nil")
 	}
-
+	if pl.ParentBeaconBlockRoot == nil {
+		return beacon.PayloadStatusV1{}, fmt.Errorf("parent beacon block root is nil")
+	}
 
 	resp, err := n.api.NewPayloadV4(ed, *pl.VersionedHashes, pl.ParentBeaconBlockRoot, requests)
 	n.latestPayloadStatusReponse = &resp

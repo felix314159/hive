@@ -238,7 +238,7 @@ func (tc InvalidMissingAncestorReOrgSyncTest) Execute(t *test.Env) {
 		t.Fatalf("FAIL (%s): Unable to spawn a secondary client: %v", t.TestName, err)
 	}
 
-	t.CLMock.AddEngineClient(secondaryClient)
+	t.CLMock.AddEngineClient(secondaryClient, secondaryClient.latestNewPayloadSent.VersionedHashes, secondaryClient.latestNewPayloadSent.ParentBeaconBlockRoot)
 	secondaryTestClient := test.NewTestEngineClient(t, secondaryClient)
 
 	if !tc.ReOrgFromCanonical {
@@ -327,7 +327,10 @@ func (tc InvalidMissingAncestorReOrgSyncTest) Execute(t *test.Env) {
 			altChainPayloads = append(altChainPayloads, sidePayload)
 
 			// TODO: This could be useful to try to produce an invalid block that has some invalid field not included in the ExecutableData
-			sideBlock, err := typ.ExecutableDataToBlock(*sidePayload, requests)
+
+			// TODO: where to get actual requests?
+			requests := [][]byte{}
+			sideBlock, err := typ.ExecutableDataToBlock(*sidePayload, *sidePayload.VersionedHashes, sidePayload.ParentBeaconBlockRoot, requests)
 			if err != nil {
 				t.Fatalf("FAIL (%s): Error converting payload to block: %v", t.TestName, err)
 			}
@@ -336,7 +339,7 @@ func (tc InvalidMissingAncestorReOrgSyncTest) Execute(t *test.Env) {
 				if tc.InvalidField == helper.InvalidOmmers {
 					if unclePayload, ok := t.CLMock.ExecutedPayloadHistory[sideBlock.NumberU64()-1]; ok && unclePayload != nil {
 						// Uncle is a PoS payload
-						uncle, err = typ.ExecutableDataToBlock(*unclePayload, requests)
+						uncle, err = typ.ExecutableDataToBlock(*unclePayload, *unclePayload.VersionedHashes, unclePayload.ParentBeaconBlockRoot, requests)
 						if err != nil {
 							t.Fatalf("FAIL (%s): Unable to get uncle block: %v", t.TestName, err)
 						}

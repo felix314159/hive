@@ -462,16 +462,23 @@ func (ec *HiveRPCEngineClient) NewPayloadV2(ctx context.Context, payload *typ.Ex
 	return ec.NewPayload(ctx, 2, payload)
 }
 
-func (ec *HiveRPCEngineClient) NewPayloadV3(ctx context.Context, payload *typ.ExecutableData) (api.PayloadStatusV1, error) {
+func (ec *HiveRPCEngineClient) NewPayloadV3(ctx context.Context, payload *typ.ExecutableData, versionedHashes []common.Hash, beaconRoot *common.Hash) (api.PayloadStatusV1, error) {
+	payload.VersionedHashes = &versionedHashes
+	payload.ParentBeaconBlockRoot = beaconRoot
+
 	ec.latestPayloadSent = payload
+
 	return ec.NewPayload(ctx, 3, payload)
 }
 
 // NewPayloadV4 was added for Prague
-func (ec *HiveRPCEngineClient) NewPayloadV4(ctx context.Context, payload *typ.ExecutableData, requests [][]byte) (api.PayloadStatusV1, error) {
+func (ec *HiveRPCEngineClient) NewPayloadV4(ctx context.Context, payload *typ.ExecutableData, versionedHashes []common.Hash, beaconRoot *common.Hash, executionRequests [][]byte) (api.PayloadStatusV1, error) {
 	var result api.PayloadStatusV1
 	version := 4
 	
+	payload.VersionedHashes = &versionedHashes
+	payload.ParentBeaconBlockRoot = beaconRoot
+
 	ec.latestPayloadSent = payload
 	
 	// in order to avoid being forced to add a requests Parameter to NewPayload copy its logic here 
@@ -479,7 +486,7 @@ func (ec *HiveRPCEngineClient) NewPayloadV4(ctx context.Context, payload *typ.Ex
 		return result, err
 	}
 
-	err := ec.c.CallContext(ctx, &result, fmt.Sprintf("engine_newPayloadV%d", version), payload, payload.VersionedHashes, payload.ParentBeaconBlockRoot, requests)
+	err := ec.c.CallContext(ctx, &result, fmt.Sprintf("engine_newPayloadV%d", version), payload, versionedHashes, beaconRoot, executionRequests)
 	ec.latestPayloadStatusReponse = &result
 	return result, err
 
