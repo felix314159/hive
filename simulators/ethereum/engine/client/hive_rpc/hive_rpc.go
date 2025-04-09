@@ -441,8 +441,11 @@ func (ec *HiveRPCEngineClient) NewPayload(ctx context.Context, version int, payl
 	}
 
 	if version >= 4 {
-		err = ec.c.CallContext(ctx, &result, fmt.Sprintf("engine_newPayloadV%d", version), payload, payload.VersionedHashes, payload.ParentBeaconBlockRoot)
-	} else if version == 3 {
+		//err = ec.c.CallContext(ctx, &result, fmt.Sprintf("engine_newPayloadV%d", version), payload, payload.VersionedHashes, payload.ParentBeaconBlockRoot)
+		panic("this does not work cuz you are supposed to call NewPayloadV4 directly")
+	}
+
+	if version == 3 {
 		err = ec.c.CallContext(ctx, &result, "engine_newPayloadV3", payload, payload.VersionedHashes, payload.ParentBeaconBlockRoot)
 	} else {
 		err = ec.c.CallContext(ctx, &result, fmt.Sprintf("engine_newPayloadV%d", version), payload)
@@ -467,9 +470,22 @@ func (ec *HiveRPCEngineClient) NewPayloadV3(ctx context.Context, payload *typ.Ex
 }
 
 // NewPayloadV4 was added for Prague
-func (ec *HiveRPCEngineClient) NewPayloadV4(ctx context.Context, payload *typ.ExecutableData) (api.PayloadStatusV1, error) {
+func (ec *HiveRPCEngineClient) NewPayloadV4(ctx context.Context, payload *typ.ExecutableData, requests [][]byte) (api.PayloadStatusV1, error) {
+	var result api.PayloadStatusV1
+	version := 4
+	
 	ec.latestPayloadSent = payload
-	return ec.NewPayload(ctx, 4, payload)
+	
+	// in order to avoid being forced to add a requests Parameter to NewPayload copy its logic here 
+	if err := ec.PrepareDefaultAuthCallToken(); err != nil {
+		return result, err
+	}
+
+	err := ec.c.CallContext(ctx, &result, fmt.Sprintf("engine_newPayloadV%d", version), payload, payload.VersionedHashes, payload.ParentBeaconBlockRoot, requests)
+	ec.latestPayloadStatusReponse = &result
+	return result, err
+
+
 }
 
 // Exchange Transition Configuration API Call Methods

@@ -45,7 +45,7 @@ type Engine interface {
 	NewPayloadV1(ctx context.Context, payload *typ.ExecutableData) (api.PayloadStatusV1, error)
 	NewPayloadV2(ctx context.Context, payload *typ.ExecutableData) (api.PayloadStatusV1, error)
 	NewPayloadV3(ctx context.Context, payload *typ.ExecutableData) (api.PayloadStatusV1, error)
-	NewPayloadV4(ctx context.Context, payload *typ.ExecutableData) (api.PayloadStatusV1, error)
+	NewPayloadV4(ctx context.Context, payload *typ.ExecutableData, requests [][]byte) (api.PayloadStatusV1, error)
 
 	GetPayloadBodiesByRangeV1(ctx context.Context, start uint64, count uint64) ([]*typ.ExecutionPayloadBodyV1, error)
 	GetPayloadBodiesByHashV1(ctx context.Context, hashes []common.Hash) ([]*typ.ExecutionPayloadBodyV1, error)
