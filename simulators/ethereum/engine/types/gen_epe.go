@@ -18,6 +18,7 @@ func (e ExecutionPayloadEnvelope) MarshalJSON() ([]byte, error) {
 		ExecutionPayload      *ExecutableData `json:"executionPayload"       gencodec:"required"`
 		BlockValue            *hexutil.Big    `json:"blockValue"             gencodec:"required"`
 		BlobsBundle           *BlobsBundle    `json:"blobsBundle,omitempty"`
+		Requests              [][]byte        `json:"executionRequests"`
 		ShouldOverrideBuilder *bool           `json:"shouldOverrideBuilder,omitempty"`
 	}
 	var enc ExecutionPayloadEnvelope

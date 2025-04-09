@@ -13,7 +13,7 @@ type BinaryMarshable interface {
 	MarshalBinary() ([]byte, error)
 }
 
-//go:generate gencodec -type ExecutionPayloadBodyV1 -field-override executionPayloadBodyV1Marshaling -out gen_epbv1.go
+//go:generate go run github.com/fjl/gencodec -type ExecutionPayloadBodyV1 -field-override executionPayloadBodyV1Marshaling -out gen_epbv1.go
 type ExecutionPayloadBodyV1 struct {
 	Transactions [][]byte            `json:"transactions"  gencodec:"required"`
 	Withdrawals  []*types.Withdrawal `json:"withdrawals"`
@@ -26,7 +26,7 @@ type executionPayloadBodyV1Marshaling struct {
 
 // ExecutableData is the data necessary to execute an EL payload.
 //
-//go:generate gencodec -type ExecutableDataV1 -field-override executableDataV1Marshaling -out gen_edv1.go
+//go:generate go run github.com/fjl/gencodec -type ExecutableDataV1 -field-override executableDataV1Marshaling -out gen_edv1.go
 type ExecutableDataV1 struct {
 	ParentHash    common.Hash    `json:"parentHash"    gencodec:"required"`
 	FeeRecipient  common.Address `json:"feeRecipient"  gencodec:"required"`
@@ -95,7 +95,7 @@ func (edv1 *ExecutableDataV1) FromExecutableData(ed *ExecutableData) {
 	edv1.Transactions = ed.Transactions
 }
 
-//go:generate gencodec -type PayloadAttributes -field-override payloadAttributesMarshaling -out gen_blockparams.go
+//go:generate go run github.com/fjl/gencodec -type PayloadAttributes -field-override payloadAttributesMarshaling -out gen_blockparams.go
 
 // PayloadAttributes describes the environment context in which a block should
 // be built.
@@ -112,57 +112,7 @@ type payloadAttributesMarshaling struct {
 	Timestamp hexutil.Uint64
 }
 
-/*
-
-// Request type EIP-7685
-type Request struct {
-	RequestType byte
-	RequestData []byte
-}
-
-func NewRequest(requestType byte, requestData []byte) (Request, error) {
-	// Deposit is requestType 0, Withdrawal requestType 1 and Consolidation requestType 2
-	if requestType > 2 {
-		return Request{}, fmt.Errorf("invalid requestType, expected 0/1/2 but got %v", requestType)
-	}
-
-	if len(requestData) == 0 {
-		return Request{}, fmt.Errorf("empty requestData is not allowed")
-	}
-
-	
-	return Request {
-		RequestType: requestType,
-		RequestData: requestData,
-	}, nil
-
-}
-
-func (r Request) RequestToBytes() []byte {
-	// requestType +(append) requestData
-	return append([]byte{r.RequestType}, r.RequestData...)
-}
-
-func (r Request) GetType() string {
-	if len(r.RequestData) == 0 {
-		return "InvalidRequest" // someone passes zero-valued request as result of providing invalid parameters to constructor
-	}
-
-	switch r.RequestType {
-	case 0:
-		return "DepositRequest"
-	case 1:
-		return "WithdrawalRequest"
-	case 2:
-		return "ConsolidationRequest"
-	default:
-		return "InvalidRequest" // does not happen if everyone uses the constructor NewRequest
-	}
-}
-*/
-
-
-//go:generate gencodec -type ExecutableData -field-override executableDataMarshaling -out gen_ed.go
+//go:generate go run github.com/fjl/gencodec -type ExecutableData -field-override executableDataMarshaling -out gen_ed.go
 
 // ExecutableData is the data necessary to execute an EL payload.
 type ExecutableData struct {
@@ -187,7 +137,6 @@ type ExecutableData struct {
 	// NewPayload parameters
 	VersionedHashes       *[]common.Hash 	`json:"-"`
 	ParentBeaconBlockRoot *common.Hash   	`json:"-"`
-	ExecutionRequests     []hexutil.Bytes	`json:"-"` // PayloadV4 Prague
 
 	// Payload Attributes used to build the block
 	PayloadAttributes PayloadAttributes `json:"-"`
@@ -238,6 +187,7 @@ type BlobAndProofV1 struct {
 
 type executionPayloadEnvelopeMarshaling struct {
 	BlockValue *hexutil.Big
+	Requests []hexutil.Bytes
 }
 
 // Convert Execution Payload Types
@@ -294,7 +244,7 @@ func ExecutableDataToBlock(ed ExecutableData) (*types.Block, error) {
 	if ed.VersionedHashes != nil {
 		versionedHashes = *ed.VersionedHashes
 	}
-	return geth_beacon.ExecutableDataToBlock(gethEd, versionedHashes, ed.ParentBeaconBlockRoot, convertHexutilBytesToBytesSlice(ed.ExecutionRequests))
+	return geth_beacon.ExecutableDataToBlock(gethEd, versionedHashes, ed.ParentBeaconBlockRoot)
 }
 
 // convertHexutilBytesToBytesSlice is a helper function for converting

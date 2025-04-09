@@ -36,7 +36,6 @@ func (e ExecutableData) MarshalJSON() ([]byte, error) {
 		ExcessBlobGas         *hexutil.Uint64     `json:"excessBlobGas,omitempty"`
 		VersionedHashes       *[]common.Hash      `json:"-"`
 		ParentBeaconBlockRoot *common.Hash        `json:"-"`
-		ExecutionRequests     []hexutil.Bytes     `json:"-"`
 		PayloadAttributes     PayloadAttributes   `json:"-"`
 	}
 	var enc ExecutableData
@@ -64,7 +63,6 @@ func (e ExecutableData) MarshalJSON() ([]byte, error) {
 	enc.ExcessBlobGas = (*hexutil.Uint64)(e.ExcessBlobGas)
 	enc.VersionedHashes = e.VersionedHashes
 	enc.ParentBeaconBlockRoot = e.ParentBeaconBlockRoot
-	enc.ExecutionRequests = e.ExecutionRequests
 	enc.PayloadAttributes = e.PayloadAttributes
 	return json.Marshal(&enc)
 }
@@ -91,7 +89,7 @@ func (e *ExecutableData) UnmarshalJSON(input []byte) error {
 		ExcessBlobGas         *hexutil.Uint64     `json:"excessBlobGas,omitempty"`
 		VersionedHashes       *[]common.Hash      `json:"-"`
 		ParentBeaconBlockRoot *common.Hash        `json:"-"`
-		ExecutionRequests     []hexutil.Bytes     `json:"-"`
+		Requests              []hexutil.Bytes     `json:"-"`
 		PayloadAttributes     *PayloadAttributes  `json:"-"`
 	}
 	var dec ExecutableData
@@ -171,9 +169,6 @@ func (e *ExecutableData) UnmarshalJSON(input []byte) error {
 	}
 	if dec.ParentBeaconBlockRoot != nil {
 		e.ParentBeaconBlockRoot = dec.ParentBeaconBlockRoot
-	}
-	if dec.ExecutionRequests != nil {
-		e.ExecutionRequests = dec.ExecutionRequests
 	}
 	if dec.PayloadAttributes != nil {
 		e.PayloadAttributes = *dec.PayloadAttributes
