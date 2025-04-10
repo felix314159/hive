@@ -440,7 +440,7 @@ func (ec *HiveRPCEngineClient) NewPayload(ctx context.Context, version int, payl
 
 	if version >= 4 {
 		//err = ec.c.CallContext(ctx, &result, fmt.Sprintf("engine_newPayloadV%d", version), payload, payload.VersionedHashes, payload.ParentBeaconBlockRoot)
-		panic("this does not work cuz you are supposed to call NewPayloadV4 directly")
+		panic("hive_rpc.go: this does not work cuz you are supposed to call NewPayloadV4 directly")
 	}
 
 	if version == 3 {

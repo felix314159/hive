@@ -422,7 +422,10 @@ func (n *GethNode) NewPayload(ctx context.Context, version int, pl *typ.Executab
 	case 2:
 		return n.NewPayloadV2(ctx, pl)
 	case 3:
-		return n.NewPayloadV3(ctx, pl)
+		return n.NewPayloadV3(ctx, pl, *pl.VersionedHashes, pl.ParentBeaconBlockRoot)
+	case 4:
+		//return n.NewPayloadV4(ctx, pl, *pl.VersionedHashes, pl.ParentBeaconBlockRoot, ?)
+		panic("node.go: this does not work cuz you are supposed to call NewPayloadV4 directly")
 	}
 	return beacon.PayloadStatusV1{}, fmt.Errorf("unknown version %d", version)
 }
@@ -449,8 +452,12 @@ func (n *GethNode) NewPayloadV2(ctx context.Context, pl *typ.ExecutableData) (be
 	return resp, err
 }
 
-func (n *GethNode) NewPayloadV3(ctx context.Context, pl *typ.ExecutableData) (beacon.PayloadStatusV1, error) {
+func (n *GethNode) NewPayloadV3(ctx context.Context, pl *typ.ExecutableData, versionedHashes []common.Hash, beaconRoot *common.Hash, ) (beacon.PayloadStatusV1, error) {
+	pl.VersionedHashes = &versionedHashes
+	pl.ParentBeaconBlockRoot = beaconRoot
+
 	n.latestPayloadSent = pl
+
 	ed, err := typ.ToBeaconExecutableData(pl)
 	if err != nil {
 		return beacon.PayloadStatusV1{}, err
