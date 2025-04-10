@@ -238,7 +238,7 @@ func (tc InvalidMissingAncestorReOrgSyncTest) Execute(t *test.Env) {
 		t.Fatalf("FAIL (%s): Unable to spawn a secondary client: %v", t.TestName, err)
 	}
 
-	t.CLMock.AddEngineClient(secondaryClient, secondaryClient.latestNewPayloadSent.VersionedHashes, secondaryClient.latestNewPayloadSent.ParentBeaconBlockRoot)
+	t.CLMock.AddEngineClient(secondaryClient)
 	secondaryTestClient := test.NewTestEngineClient(t, secondaryClient)
 
 	if !tc.ReOrgFromCanonical {
@@ -392,7 +392,9 @@ func (tc InvalidMissingAncestorReOrgSyncTest) Execute(t *test.Env) {
 					s.ExpectAnyPayloadStatus(test.Valid, test.Syncing)
 
 				} else {
-					invalidBlock, err := typ.ExecutableDataToBlock(*altChainPayloads[i])
+					p := *altChainPayloads[i]
+					// TODO: how can we get requests as last argument here? for now just put empty slice of slices
+					invalidBlock, err := typ.ExecutableDataToBlock(p, *p.VersionedHashes, p.ParentBeaconBlockRoot, [][]byte{})
 					if err != nil {
 						t.Fatalf("FAIL (%s): TEST ISSUE - Failed to create block from payload: %v", t.TestName, err)
 					}
