@@ -12,6 +12,7 @@ import (
 	beacon "github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -487,9 +488,18 @@ func (n *GethNode) NewPayloadV4(ctx context.Context, pl *typ.ExecutableData, ver
 		return beacon.PayloadStatusV1{}, fmt.Errorf("parent beacon block root is nil")
 	}
 
-	resp, err := n.api.NewPayloadV4(ed, *pl.VersionedHashes, pl.ParentBeaconBlockRoot, requests)
+	resp, err := n.api.NewPayloadV4(ed, *pl.VersionedHashes, pl.ParentBeaconBlockRoot, ConvertToHexutilBytes(requests))
 	n.latestPayloadStatusReponse = &resp
 	return resp, err
+}
+
+// takes [][]byte and returns it as []hexutil.Bytes
+func ConvertToHexutilBytes(input [][]byte) []hexutil.Bytes {
+	result := make([]hexutil.Bytes, len(input))
+	for i, b := range input {
+		result[i] = hexutil.Bytes(b)
+	}
+	return result
 }
 
 func (n *GethNode) ForkchoiceUpdated(ctx context.Context, version int, fcs *beacon.ForkchoiceStateV1, payload *typ.PayloadAttributes) (beacon.ForkChoiceResponse, error) {
