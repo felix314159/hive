@@ -19,7 +19,6 @@ import (
 	suite_withdrawals "github.com/ethereum/hive/simulators/ethereum/engine/suites/withdrawals"
 	"github.com/ethereum/hive/simulators/ethereum/engine/test"
 
-	_ "github.com/fjl/gencodec" // stop removing this from go.mod we need it for go:gen
 )
 
 var (
