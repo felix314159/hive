@@ -21,7 +21,7 @@ func logdirGC(dir string, cutoff time.Time, keepMin int) error {
 	// Avoid deleting the status/version file.
 	usedFiles["hive.json"] = struct{}{}
 
-	// Walk all suite files and pouplate the usedFiles set.
+	// Walk all suite files and populate the usedFiles set.
 	err := walkSummaryFiles(fsys, ".", func(suite *libhive.TestSuite, fi fs.FileInfo) error {
 		// Skip when too old and when above the minimum.
 		// Note we rely on getting called in descending time order here.

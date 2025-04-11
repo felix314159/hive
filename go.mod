@@ -1,14 +1,13 @@
 module github.com/ethereum/hive
 
-go 1.23.0
-
-toolchain go1.23.5
+go 1.24.2
 
 require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/ethereum/go-ethereum v1.15.7
 	github.com/ethereum/hive/hiveproxy v0.0.0-20240610172618-786a798a0cfe
 	github.com/evanw/esbuild v0.18.11
+	github.com/fjl/gencodec v0.1.0
 	github.com/fsouza/go-dockerclient v1.11.2
 	github.com/golang-jwt/jwt/v4 v4.5.1
 	github.com/gorilla/mux v1.8.1
@@ -41,6 +40,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/ethereum/c-kzg-4844 v1.0.0 // indirect
 	github.com/ethereum/go-verkle v0.2.2 // indirect
+	github.com/garslo/gogen v0.0.0-20170306192744-1d203ffc1f61 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -73,8 +73,10 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	golang.org/x/crypto v0.35.0 // indirect
+	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/tools v0.29.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 

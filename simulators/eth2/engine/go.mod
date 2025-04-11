@@ -1,8 +1,6 @@
 module github.com/ethereum/hive/simulators/eth2/engine
 
-go 1.21
-
-toolchain go1.22.1
+go 1.24.2
 
 require (
 	github.com/ethereum/go-ethereum v1.14.5

@@ -187,7 +187,7 @@ type BlobAndProofV1 struct {
 
 type executionPayloadEnvelopeMarshaling struct {
 	BlockValue *hexutil.Big
-	Requests []hexutil.Bytes
+	Requests [][]byte
 }
 
 // Convert Execution Payload Types

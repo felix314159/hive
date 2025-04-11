@@ -1,8 +1,6 @@
 module github.com/ethereum/hive/simulators/smoke/clique
 
-go 1.21
-
-toolchain go1.22.1
+go 1.24.2
 
 require github.com/ethereum/hive v0.0.0-20240715150147-c87a99dccfce
 
