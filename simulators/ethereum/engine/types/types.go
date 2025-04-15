@@ -28,31 +28,31 @@ type executionPayloadBodyV1Marshaling struct {
 //
 //go:generate go run github.com/fjl/gencodec -type ExecutableDataV1 -field-override executableDataV1Marshaling -out gen_edv1.go
 type ExecutableDataV1 struct {
-	ParentHash    common.Hash    `json:"parentHash"    gencodec:"required"`
-	FeeRecipient  common.Address `json:"feeRecipient"  gencodec:"required"`
-	StateRoot     common.Hash    `json:"stateRoot"     gencodec:"required"`
-	ReceiptsRoot  common.Hash    `json:"receiptsRoot"  gencodec:"required"`
+	ParentHash    common.Hash    `json:"parentHash"`
+	FeeRecipient  common.Address `json:"feeRecipient"`
+	StateRoot     common.Hash    `json:"stateRoot"`
+	ReceiptsRoot  common.Hash    `json:"receiptsRoot"`
 	LogsBloom     []byte         `json:"logsBloom"     gencodec:"required"`
-	Random        common.Hash    `json:"prevRandao"    gencodec:"required"`
+	Random        common.Hash    `json:"prevRandao"`
 	Number        uint64         `json:"blockNumber"   gencodec:"required"`
 	GasLimit      uint64         `json:"gasLimit"      gencodec:"required"`
 	GasUsed       uint64         `json:"gasUsed"       gencodec:"required"`
 	Timestamp     uint64         `json:"timestamp"     gencodec:"required"`
 	ExtraData     []byte         `json:"extraData"     gencodec:"required"`
 	BaseFeePerGas *big.Int       `json:"baseFeePerGas" gencodec:"required"`
-	BlockHash     common.Hash    `json:"blockHash"     gencodec:"required"`
+	BlockHash     common.Hash    `json:"blockHash"`
 	Transactions  [][]byte       `json:"transactions"  gencodec:"required"`
 }
 
 // JSON type overrides for executableData.
 type executableDataV1Marshaling struct {
+	LogsBloom     hexutil.Bytes
 	Number        hexutil.Uint64
 	GasLimit      hexutil.Uint64
 	GasUsed       hexutil.Uint64
 	Timestamp     hexutil.Uint64
-	BaseFeePerGas *hexutil.Big
 	ExtraData     hexutil.Bytes
-	LogsBloom     hexutil.Bytes
+	BaseFeePerGas *hexutil.Big
 	Transactions  []hexutil.Bytes
 }
 
@@ -157,7 +157,6 @@ type executableDataMarshaling struct {
 }
 
 //go:generate gencodec -type ExecutionPayloadEnvelope -field-override executionPayloadEnvelopeMarshaling -out gen_epe.go
-
 type ExecutionPayloadEnvelope struct {
 	ExecutionPayload      *ExecutableData `json:"executionPayload"       gencodec:"required"`
 	BlockValue            *big.Int        `json:"blockValue"             gencodec:"required"`
@@ -165,13 +164,23 @@ type ExecutionPayloadEnvelope struct {
 	ShouldOverrideBuilder *bool           `json:"shouldOverrideBuilder,omitempty"`
 }
 
+type executionPayloadEnvelopeMarshaling struct {
+	BlockValue *hexutil.Big
+}
+
+//go:generate gencodec -type ExecutionPayloadEnvelopePrague -field-override executionPayloadEnvelopePragueMarshaling -out gen_epe-prague.go
 type ExecutionPayloadEnvelopePrague struct {
 	ExecutionPayload *ExecutableData `json:"executionPayload"  gencodec:"required"`
 	BlockValue       *big.Int        `json:"blockValue"  gencodec:"required"`
 	BlobsBundle      *BlobsBundleV1  `json:"blobsBundle"`
-	Requests         [][]byte        `json:"executionRequests"`
+	Requests         [][]byte        `json:"executionRequests" gencodec:"required"`
 	Override         bool            `json:"shouldOverrideBuilder"`
 	Witness          *hexutil.Bytes  `json:"witness,omitempty"`
+}
+
+type executionPayloadEnvelopePragueMarshaling struct {
+	BlockValue *hexutil.Big
+	Requests [][]byte
 }
 
 type BlobsBundleV1 struct {
@@ -185,10 +194,7 @@ type BlobAndProofV1 struct {
 	Proof hexutil.Bytes `json:"proof"`
 }
 
-type executionPayloadEnvelopeMarshaling struct {
-	BlockValue *hexutil.Big
-	Requests [][]byte
-}
+
 
 // Convert Execution Payload Types
 func ToBeaconExecutableData(pl *ExecutableData) (geth_beacon.ExecutableData, error) {
