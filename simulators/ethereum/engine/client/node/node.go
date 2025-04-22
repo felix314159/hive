@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"os"
 	"sync"
@@ -584,12 +585,24 @@ func (n *GethNode) GetPayloadV3(ctx context.Context, payloadId *beacon.PayloadID
 
 func (n *GethNode) GetPayloadV4(ctx context.Context, payloadId *beacon.PayloadID) (typ.ExecutableData, *big.Int, *typ.BlobsBundle, *bool, [][]byte, error) {
 	p, err := n.api.GetPayloadV4(*payloadId)
-	if p == nil || err != nil {
+	if p == nil {
+		slog.Warn("DEBUG ABC: p (return value of GetPayloadV4()) equals nil")
+		return typ.ExecutableData{}, nil, nil, nil, nil, err
+	}
+	if err != nil {
+		slog.Warn(fmt.Sprintf("DEBUG ABC: GetPayloadV4() returned this error: %v", err))
 		return typ.ExecutableData{}, nil, nil, nil, nil, err
 	}
 	ed, err := typ.FromBeaconExecutableData(p.ExecutionPayload)
+	if err != nil {
+		slog.Warn(fmt.Sprintf("DEBUG ABC: FromBeaconExecutableData() returned this error: %v", err))
+		return typ.ExecutableData{}, nil, nil, nil, nil, err
+	}
+
 	blobsBundle := &typ.BlobsBundle{}
-	if err := blobsBundle.FromBeaconBlobsBundle(p.BlobsBundle); err != nil {
+	err = blobsBundle.FromBeaconBlobsBundle(p.BlobsBundle)
+	if err != nil {
+		slog.Warn(fmt.Sprintf("DEBUG ABC: FromBeaconBlobsBundle() returned this error: %v", err))
 		return typ.ExecutableData{}, nil, nil, nil, nil, err
 	}
 
@@ -611,6 +624,7 @@ func (n *GethNode) GetPayload(ctx context.Context, version int, payloadId *beaco
 	case 4:
 		return n.GetPayloadV4(ctx, payloadId)
 	default:
+		slog.Warn(fmt.Sprintf("DEBUG: GetPayload() got an unknown version: %d", version))
 		return typ.ExecutableData{}, nil, nil, nil, nil, fmt.Errorf("unknown version %d", version)
 	}
 }

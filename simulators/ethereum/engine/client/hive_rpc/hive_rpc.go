@@ -3,6 +3,7 @@ package hive_rpc
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"net"
 	"net/http"
@@ -361,7 +362,7 @@ func (ec *HiveRPCEngineClient) GetPayload(ctx context.Context, version int, payl
 			executableData = *response.ExecutionPayload
 			requests = response.Requests
 		} else {
-			fmt.Println("response.ExecutionPayload is nil")
+			slog.Warn("DEBUG ABC: response.ExecutionPayload is nil")
 		}
 		return executableData, blockValue, blobsBundle, shouldOverrideBuilder, requests, err
 

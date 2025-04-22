@@ -20,7 +20,7 @@
   dockerfile: git
   build_args:
     github: NethermindEth/nethermind
-    tag: release/1.31.6
+    tag: master
 - client: erigon
   nametag: default
   dockerfile: git
