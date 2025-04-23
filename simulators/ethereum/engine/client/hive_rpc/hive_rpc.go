@@ -440,15 +440,14 @@ func (ec *HiveRPCEngineClient) NewPayload(ctx context.Context, version int, payl
 	}
 
 	if version >= 4 {
-		//err = ec.c.CallContext(ctx, &result, fmt.Sprintf("engine_newPayloadV%d", version), payload, payload.VersionedHashes, payload.ParentBeaconBlockRoot)
-		panic("hive_rpc.go: this does not work cuz you are supposed to call NewPayloadV4 directly")
-	}
-
-	if version == 3 {
+		// TODO: we need to be able to pass requests list, but since its not  part of executabledata it must be separately passed but then newpayload must be changed -> interface change -> cascade of necessary adjustments all through hive
+		err = ec.c.CallContext(ctx, &result, "engine_newPayloadV4", payload, payload.VersionedHashes, payload.ParentBeaconBlockRoot, payload.???)
+	} else if version == 3 {
 		err = ec.c.CallContext(ctx, &result, "engine_newPayloadV3", payload, payload.VersionedHashes, payload.ParentBeaconBlockRoot)
 	} else {
 		err = ec.c.CallContext(ctx, &result, fmt.Sprintf("engine_newPayloadV%d", version), payload)
 	}
+
 	ec.latestPayloadStatusReponse = &result
 	return result, err
 }

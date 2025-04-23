@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"math/rand"
 	"sync"
@@ -473,14 +474,21 @@ func (cl *CLMocker) GetNextPayload() {
 
 	if cl.IsCancun(cl.LatestPayloadBuilt.Timestamp) || cl.IsPrague(cl.LatestPayloadBuilt.Timestamp) {
 		// Check if we have blobs to include in the broadcast
-		if cl.LatestBlobBundle == nil {
-			cl.Fatalf("CLMocker: No blob bundle on cancun or prague")
+		if cl.LatestBlobBundle != nil {
+			// case: there are blobs that we need to broadcast to all clients
+			cl.LatestPayloadBuilt.VersionedHashes, err = cl.LatestBlobBundle.VersionedHashes(cancun.BLOB_COMMITMENT_VERSION_KZG)
+			if err != nil {
+				cl.Fatalf("CLMocker: Could not get versioned hashes from blob bundle: %v", err)
+			}
+		// case: no blobs	
+		} else {
+			if cl.IsCancun(cl.LatestPayloadBuilt.Timestamp) {
+				slog.Info("CLMocker: No blob bundle on cancun")
+			} else {
+				slog.Info("CLMocker: No blob bundle on prague")
+			}
 		}
-		// Broadcast the blob bundle to all clients
-		cl.LatestPayloadBuilt.VersionedHashes, err = cl.LatestBlobBundle.VersionedHashes(cancun.BLOB_COMMITMENT_VERSION_KZG)
-		if err != nil {
-			cl.Fatalf("CLMocker: Could not get versioned hashes from blob bundle: %v", err)
-		}
+
 		cl.LatestPayloadBuilt.ParentBeaconBlockRoot = cl.LatestPayloadAttributes.BeaconRoot
 	}
 

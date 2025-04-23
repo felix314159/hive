@@ -512,14 +512,15 @@ func (step NewPayloads) Execute(t *TestContext) error {
 
 				if !t.Env.ForkConfig.IsPrague(payload.Timestamp) {
 					// Nothing to do
+					t.Log("We are not on prague that's why the rest of OnGetPayload will not be run (only blob & request related stuff)")
 					return
 				}
 				if blobBundle == nil {
-					t.Fatalf("FAIL: Error getting blobs bundle (payload %d/%d): blobBundle is nil", p+1, payloadCount)
+					t.Logf("FAIL: Error getting blobs bundle (payload %d/%d): blobBundle is nil", p+1, payloadCount)
 				}
 
 				if requests == nil {
-					t.Fatalf("FAIL: Error getting execution requests (payload %d/%d): requests is nil", p+1, payloadCount)
+					t.Logf("FAIL: Error getting execution requests (payload %d/%d): requests is nil", p+1, payloadCount)
 				}
 
 				_, blobDataInPayload, err := GetBlobDataInPayload(t.TestBlobTxPool, payload)

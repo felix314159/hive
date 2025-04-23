@@ -606,6 +606,10 @@ func (n *GethNode) GetPayloadV4(ctx context.Context, payloadId *beacon.PayloadID
 		return typ.ExecutableData{}, nil, nil, nil, nil, err
 	}
 
+	if len(blobsBundle.Blobs) == 0 {
+		slog.Warn("DEBUG ABC: Detected empty blob slice")
+	}
+
 	return ed, p.BlockValue, blobsBundle, &p.Override, p.Requests, err
 }
 
