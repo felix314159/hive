@@ -157,30 +157,21 @@ type executableDataMarshaling struct {
 }
 
 //go:generate gencodec -type ExecutionPayloadEnvelope -field-override executionPayloadEnvelopeMarshaling -out gen_epe.go
+// Note: run the command above in the ./simulators/ethereum/engine/types folder
 type ExecutionPayloadEnvelope struct {
-	ExecutionPayload      *ExecutableData `json:"executionPayload"       gencodec:"required"`
-	BlockValue            *big.Int        `json:"blockValue"             gencodec:"required"`
-	BlobsBundle           *BlobsBundle    `json:"blobsBundle,omitempty"`
-	ShouldOverrideBuilder *bool           `json:"shouldOverrideBuilder,omitempty"`
+	ExecutionPayload      	*ExecutableData `json:"executionPayload"       		gencodec:"required"`
+	BlockValue            	*big.Int        `json:"blockValue"             		gencodec:"required"`
+	BlobsBundle           	*BlobsBundle    `json:"blobsBundle,omitempty"` // TODO: this or BlobsBundleV1 ?
+	Requests         		[][]byte        `json:"executionRequests,omitempty" gencodec:"required"`
+	Override         		bool            `json:"shouldOverrideBuilder"`
+	Witness          		*hexutil.Bytes  `json:"witness,omitempty"`
+	
+	ShouldOverrideBuilder 	*bool           `json:"shouldOverrideBuilder,omitempty"`
 }
 
 type executionPayloadEnvelopeMarshaling struct {
-	BlockValue *hexutil.Big
-}
-
-//go:generate gencodec -type ExecutionPayloadEnvelopePrague -field-override executionPayloadEnvelopePragueMarshaling -out gen_epe-prague.go
-type ExecutionPayloadEnvelopePrague struct {
-	ExecutionPayload *ExecutableData `json:"executionPayload"  gencodec:"required"`
-	BlockValue       *big.Int        `json:"blockValue"  gencodec:"required"`
-	BlobsBundle      *BlobsBundleV1  `json:"blobsBundle"`
-	Requests         [][]byte        `json:"executionRequests" gencodec:"required"`
-	Override         bool            `json:"shouldOverrideBuilder"`
-	Witness          *hexutil.Bytes  `json:"witness,omitempty"`
-}
-
-type executionPayloadEnvelopePragueMarshaling struct {
-	BlockValue *hexutil.Big
-	Requests [][]byte
+	BlockValue 	*hexutil.Big
+	Requests 	[]hexutil.Bytes
 }
 
 type BlobsBundleV1 struct {
