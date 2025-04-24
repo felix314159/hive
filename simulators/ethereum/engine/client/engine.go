@@ -41,7 +41,7 @@ type Engine interface {
 	GetPayloadV4(ctx context.Context, payloadId *api.PayloadID) (typ.ExecutableData, *big.Int, *typ.BlobsBundle, *bool, [][]byte, error)
 	GetPayload(ctx context.Context, version int, payloadId *api.PayloadID) (typ.ExecutableData, *big.Int, *typ.BlobsBundle, *bool, [][]byte, error)
 
-	NewPayload(ctx context.Context, version int, payload *typ.ExecutableData) (api.PayloadStatusV1, error)
+	NewPayload(ctx context.Context, version int, payload *typ.ExecutableData, requests [][]byte, witness bool) (api.PayloadStatusV1, error)
 	NewPayloadV1(ctx context.Context, payload *typ.ExecutableData) (api.PayloadStatusV1, error)
 	NewPayloadV2(ctx context.Context, payload *typ.ExecutableData) (api.PayloadStatusV1, error)
 	NewPayloadV3(ctx context.Context, payload *typ.ExecutableData, versionedHashes []common.Hash, beaconRoot *common.Hash) (api.PayloadStatusV1, error)

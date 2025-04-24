@@ -417,7 +417,7 @@ func (n *GethNode) SetBlock(block *types.Block, parentNumber uint64, parentRoot 
 }
 
 // Engine API
-func (n *GethNode) NewPayload(ctx context.Context, version int, pl *typ.ExecutableData) (beacon.PayloadStatusV1, error) {
+func (n *GethNode) NewPayload(ctx context.Context, version int, pl *typ.ExecutableData, requests [][]byte, witness bool) (beacon.PayloadStatusV1, error) {
 	switch version {
 	case 1:
 		return n.NewPayloadV1(ctx, pl)
@@ -426,8 +426,7 @@ func (n *GethNode) NewPayload(ctx context.Context, version int, pl *typ.Executab
 	case 3:
 		return n.NewPayloadV3(ctx, pl, *pl.VersionedHashes, pl.ParentBeaconBlockRoot)
 	case 4:
-		//return n.NewPayloadV4(ctx, pl, *pl.VersionedHashes, pl.ParentBeaconBlockRoot, ?)
-		panic("node.go: this does not work cuz you are supposed to call NewPayloadV4 directly")
+		return n.NewPayloadV4(ctx, pl, *pl.VersionedHashes, pl.ParentBeaconBlockRoot, requests)
 	}
 	return beacon.PayloadStatusV1{}, fmt.Errorf("unknown version %d", version)
 }

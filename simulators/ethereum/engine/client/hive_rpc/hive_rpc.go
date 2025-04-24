@@ -356,7 +356,7 @@ func (ec *HiveRPCEngineClient) GetPayload(ctx context.Context, version int, payl
 		return executableData, blockValue, blobsBundle, shouldOverrideBuilder, requests, err
 
 	} else if version == 4 {
-		var response typ.ExecutionPayloadEnvelopePrague
+		var response typ.ExecutionPayloadEnvelope
 		err = ec.c.CallContext(ctx, &response, rpcString, payloadId)
 		if response.ExecutionPayload != nil {
 			executableData = *response.ExecutionPayload
@@ -434,14 +434,13 @@ func (ec *HiveRPCEngineClient) GetBlobsBundleV1(ctx context.Context, payloadId *
 }
 
 // New Payload API Call Methods
-func (ec *HiveRPCEngineClient) NewPayload(ctx context.Context, version int, payload *typ.ExecutableData) (result api.PayloadStatusV1, err error) {
+func (ec *HiveRPCEngineClient) NewPayload(ctx context.Context, version int, payload *typ.ExecutableData, requests [][]byte, witness bool) (result api.PayloadStatusV1, err error) {
 	if err := ec.PrepareDefaultAuthCallToken(); err != nil {
 		return result, err
 	}
 
 	if version >= 4 {
-		// TODO: we need to be able to pass requests list, but since its not  part of executabledata it must be separately passed but then newpayload must be changed -> interface change -> cascade of necessary adjustments all through hive
-		err = ec.c.CallContext(ctx, &result, "engine_newPayloadV4", payload, payload.VersionedHashes, payload.ParentBeaconBlockRoot, payload.???)
+		err = ec.c.CallContext(ctx, &result, "engine_newPayloadV4", payload, payload.VersionedHashes, payload.ParentBeaconBlockRoot, requests)
 	} else if version == 3 {
 		err = ec.c.CallContext(ctx, &result, "engine_newPayloadV3", payload, payload.VersionedHashes, payload.ParentBeaconBlockRoot)
 	} else {
@@ -454,12 +453,12 @@ func (ec *HiveRPCEngineClient) NewPayload(ctx context.Context, version int, payl
 
 func (ec *HiveRPCEngineClient) NewPayloadV1(ctx context.Context, payload *typ.ExecutableData) (api.PayloadStatusV1, error) {
 	ec.latestPayloadSent = payload
-	return ec.NewPayload(ctx, 1, payload)
+	return ec.NewPayload(ctx, 1, payload, nil, false)
 }
 
 func (ec *HiveRPCEngineClient) NewPayloadV2(ctx context.Context, payload *typ.ExecutableData) (api.PayloadStatusV1, error) {
 	ec.latestPayloadSent = payload
-	return ec.NewPayload(ctx, 2, payload)
+	return ec.NewPayload(ctx, 2, payload, nil, false)
 }
 
 func (ec *HiveRPCEngineClient) NewPayloadV3(ctx context.Context, payload *typ.ExecutableData, versionedHashes []common.Hash, beaconRoot *common.Hash) (api.PayloadStatusV1, error) {
@@ -468,13 +467,12 @@ func (ec *HiveRPCEngineClient) NewPayloadV3(ctx context.Context, payload *typ.Ex
 
 	ec.latestPayloadSent = payload
 
-	return ec.NewPayload(ctx, 3, payload)
+	return ec.NewPayload(ctx, 3, payload, nil, false)
 }
 
 // NewPayloadV4 was added for Prague
 func (ec *HiveRPCEngineClient) NewPayloadV4(ctx context.Context, payload *typ.ExecutableData, versionedHashes []common.Hash, beaconRoot *common.Hash, executionRequests [][]byte) (api.PayloadStatusV1, error) {
 	var result api.PayloadStatusV1
-	version := 4
 	
 	payload.VersionedHashes = &versionedHashes
 	payload.ParentBeaconBlockRoot = beaconRoot
@@ -486,11 +484,10 @@ func (ec *HiveRPCEngineClient) NewPayloadV4(ctx context.Context, payload *typ.Ex
 		return result, err
 	}
 
-	err := ec.c.CallContext(ctx, &result, fmt.Sprintf("engine_newPayloadV%d", version), payload, versionedHashes, beaconRoot, executionRequests)
+	err := ec.c.CallContext(ctx, &result,"engine_newPayloadV4", payload, versionedHashes, beaconRoot, executionRequests)
 	ec.latestPayloadStatusReponse = &result
+	
 	return result, err
-
-
 }
 
 // Exchange Transition Configuration API Call Methods

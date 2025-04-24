@@ -713,13 +713,13 @@ type ExecutePayloadOutcome struct {
 	Error                  error
 }
 
-func (cl *CLMocker) BroadcastNewPayload(ed *typ.ExecutableData, version int) []ExecutePayloadOutcome {
+func (cl *CLMocker) BroadcastNewPayload(ed *typ.ExecutableData, version int, requests [][]byte, witness bool) []ExecutePayloadOutcome {
 	responses := make([]ExecutePayloadOutcome, len(cl.EngineClients))
 	for i, ec := range cl.EngineClients {
 		responses[i].Container = ec.ID()
 		ctx, cancel := context.WithTimeout(cl.TestContext, globals.RPCTimeout)
 		defer cancel()
-		execPayloadResp, err := ec.NewPayload(ctx, version, ed)
+		execPayloadResp, err := ec.NewPayload(ctx, version, ed, requests, witness)
 		if err != nil {
 			cl.Errorf("CLMocker: Could not ExecutePayloadV1: %v", err)
 			responses[i].Error = err
