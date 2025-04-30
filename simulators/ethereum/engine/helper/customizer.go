@@ -317,6 +317,7 @@ type CustomPayloadData struct {
 	ParentBeaconRoot          *common.Hash
 	RemoveParentBeaconRoot    bool
 	VersionedHashesCustomizer VersionedHashesCustomizer
+	Requests    	  		  [][]byte
 }
 
 var _ PayloadCustomizer = (*CustomPayloadData)(nil)

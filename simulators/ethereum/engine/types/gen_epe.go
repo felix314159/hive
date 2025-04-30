@@ -15,15 +15,26 @@ var _ = (*executionPayloadEnvelopeMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (e ExecutionPayloadEnvelope) MarshalJSON() ([]byte, error) {
 	type ExecutionPayloadEnvelope struct {
-		ExecutionPayload      *ExecutableData `json:"executionPayload"       gencodec:"required"`
-		BlockValue            *hexutil.Big    `json:"blockValue"             gencodec:"required"`
+		ExecutionPayload      *ExecutableData `json:"executionPayload"       		gencodec:"required"`
+		BlockValue            *hexutil.Big    `json:"blockValue"             		gencodec:"required"`
 		BlobsBundle           *BlobsBundle    `json:"blobsBundle,omitempty"`
+		Requests              []hexutil.Bytes `json:"executionRequests,omitempty" gencodec:"required"`
+		Override              bool            `json:"shouldOverrideBuilder"`
+		Witness               *hexutil.Bytes  `json:"witness,omitempty"`
 		ShouldOverrideBuilder *bool           `json:"shouldOverrideBuilder,omitempty"`
 	}
 	var enc ExecutionPayloadEnvelope
 	enc.ExecutionPayload = e.ExecutionPayload
 	enc.BlockValue = (*hexutil.Big)(e.BlockValue)
 	enc.BlobsBundle = e.BlobsBundle
+	if e.Requests != nil {
+		enc.Requests = make([]hexutil.Bytes, len(e.Requests))
+		for k, v := range e.Requests {
+			enc.Requests[k] = v
+		}
+	}
+	enc.Override = e.Override
+	enc.Witness = e.Witness
 	enc.ShouldOverrideBuilder = e.ShouldOverrideBuilder
 	return json.Marshal(&enc)
 }
@@ -31,25 +42,39 @@ func (e ExecutionPayloadEnvelope) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (e *ExecutionPayloadEnvelope) UnmarshalJSON(input []byte) error {
 	type ExecutionPayloadEnvelope struct {
-		ExecutionPayload      *ExecutableData `json:"executionPayload"       gencodec:"required"`
-		BlockValue            *hexutil.Big    `json:"blockValue"             gencodec:"required"`
+		ExecutionPayload      *ExecutableData `json:"executionPayload"       		gencodec:"required"`
+		BlockValue            *hexutil.Big    `json:"blockValue"             		gencodec:"required"`
 		BlobsBundle           *BlobsBundle    `json:"blobsBundle,omitempty"`
+		Requests              []hexutil.Bytes `json:"executionRequests,omitempty" gencodec:"required"`
+		Override              *bool           `json:"shouldOverrideBuilder"`
+		Witness               *hexutil.Bytes  `json:"witness,omitempty"`
 		ShouldOverrideBuilder *bool           `json:"shouldOverrideBuilder,omitempty"`
 	}
 	var dec ExecutionPayloadEnvelope
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
-	if dec.ExecutionPayload == nil {
-		return errors.New("missing required field 'executionPayload' for ExecutionPayloadEnvelope")
+	if dec.ExecutionPayload != nil {
+		e.ExecutionPayload = dec.ExecutionPayload
 	}
-	e.ExecutionPayload = dec.ExecutionPayload
-	if dec.BlockValue == nil {
-		return errors.New("missing required field 'blockValue' for ExecutionPayloadEnvelope")
+	if dec.BlockValue != nil {
+		e.BlockValue = (*big.Int)(dec.BlockValue)
 	}
-	e.BlockValue = (*big.Int)(dec.BlockValue)
 	if dec.BlobsBundle != nil {
 		e.BlobsBundle = dec.BlobsBundle
+	}
+	if dec.Requests == nil {
+		return errors.New("missing required field 'executionRequests' for ExecutionPayloadEnvelope")
+	}
+	e.Requests = make([][]byte, len(dec.Requests))
+	for k, v := range dec.Requests {
+		e.Requests[k] = v
+	}
+	if dec.Override != nil {
+		e.Override = *dec.Override
+	}
+	if dec.Witness != nil {
+		e.Witness = dec.Witness
 	}
 	if dec.ShouldOverrideBuilder != nil {
 		e.ShouldOverrideBuilder = dec.ShouldOverrideBuilder

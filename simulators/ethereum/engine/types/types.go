@@ -28,31 +28,31 @@ type executionPayloadBodyV1Marshaling struct {
 //
 //go:generate go run github.com/fjl/gencodec -type ExecutableDataV1 -field-override executableDataV1Marshaling -out gen_edv1.go
 type ExecutableDataV1 struct {
-	ParentHash    common.Hash    `json:"parentHash"    gencodec:"required"`
-	FeeRecipient  common.Address `json:"feeRecipient"  gencodec:"required"`
-	StateRoot     common.Hash    `json:"stateRoot"     gencodec:"required"`
-	ReceiptsRoot  common.Hash    `json:"receiptsRoot"  gencodec:"required"`
+	ParentHash    common.Hash    `json:"parentHash"`
+	FeeRecipient  common.Address `json:"feeRecipient"`
+	StateRoot     common.Hash    `json:"stateRoot"`
+	ReceiptsRoot  common.Hash    `json:"receiptsRoot"`
 	LogsBloom     []byte         `json:"logsBloom"     gencodec:"required"`
-	Random        common.Hash    `json:"prevRandao"    gencodec:"required"`
+	Random        common.Hash    `json:"prevRandao"`
 	Number        uint64         `json:"blockNumber"   gencodec:"required"`
 	GasLimit      uint64         `json:"gasLimit"      gencodec:"required"`
 	GasUsed       uint64         `json:"gasUsed"       gencodec:"required"`
 	Timestamp     uint64         `json:"timestamp"     gencodec:"required"`
 	ExtraData     []byte         `json:"extraData"     gencodec:"required"`
 	BaseFeePerGas *big.Int       `json:"baseFeePerGas" gencodec:"required"`
-	BlockHash     common.Hash    `json:"blockHash"     gencodec:"required"`
+	BlockHash     common.Hash    `json:"blockHash"`
 	Transactions  [][]byte       `json:"transactions"  gencodec:"required"`
 }
 
 // JSON type overrides for executableData.
 type executableDataV1Marshaling struct {
+	LogsBloom     hexutil.Bytes
 	Number        hexutil.Uint64
 	GasLimit      hexutil.Uint64
 	GasUsed       hexutil.Uint64
 	Timestamp     hexutil.Uint64
-	BaseFeePerGas *hexutil.Big
 	ExtraData     hexutil.Bytes
-	LogsBloom     hexutil.Bytes
+	BaseFeePerGas *hexutil.Big
 	Transactions  []hexutil.Bytes
 }
 
@@ -135,8 +135,8 @@ type ExecutableData struct {
 	ExcessBlobGas *uint64             `json:"excessBlobGas,omitempty"`
 
 	// NewPayload parameters
-	VersionedHashes       *[]common.Hash `json:"-"`
-	ParentBeaconBlockRoot *common.Hash   `json:"-"`
+	VersionedHashes       *[]common.Hash 	`json:"-"`
+	ParentBeaconBlockRoot *common.Hash   	`json:"-"`
 
 	// Payload Attributes used to build the block
 	PayloadAttributes PayloadAttributes `json:"-"`
@@ -156,18 +156,36 @@ type executableDataMarshaling struct {
 	ExcessBlobGas *hexutil.Uint64
 }
 
-//go:generate go run github.com/fjl/gencodec -type ExecutionPayloadEnvelope -field-override executionPayloadEnvelopeMarshaling -out gen_epe.go
-
+//go:generate gencodec -type ExecutionPayloadEnvelope -field-override executionPayloadEnvelopeMarshaling -out gen_epe.go
+// Note: run the command above in the ./simulators/ethereum/engine/types folder
 type ExecutionPayloadEnvelope struct {
-	ExecutionPayload      *ExecutableData `json:"executionPayload"       gencodec:"required"`
-	BlockValue            *big.Int        `json:"blockValue"             gencodec:"required"`
-	BlobsBundle           *BlobsBundle    `json:"blobsBundle,omitempty"`
-	ShouldOverrideBuilder *bool           `json:"shouldOverrideBuilder,omitempty"`
+	ExecutionPayload      	*ExecutableData `json:"executionPayload"       		gencodec:"required"`
+	BlockValue            	*big.Int        `json:"blockValue"             		gencodec:"required"`
+	BlobsBundle           	*BlobsBundle    `json:"blobsBundle,omitempty"` // TODO: this or BlobsBundleV1 ?
+	Requests         		[][]byte        `json:"executionRequests,omitempty" gencodec:"required"`
+	Override         		bool            `json:"shouldOverrideBuilder"`
+	Witness          		*hexutil.Bytes  `json:"witness,omitempty"`
+	
+	ShouldOverrideBuilder 	*bool           `json:"shouldOverrideBuilder,omitempty"`
 }
 
 type executionPayloadEnvelopeMarshaling struct {
-	BlockValue *hexutil.Big
+	BlockValue 	*hexutil.Big
+	Requests 	[]hexutil.Bytes
 }
+
+type BlobsBundleV1 struct {
+	Commitments []hexutil.Bytes `json:"commitments"`
+	Proofs      []hexutil.Bytes `json:"proofs"`
+	Blobs       []hexutil.Bytes `json:"blobs"`
+}
+
+type BlobAndProofV1 struct {
+	Blob  hexutil.Bytes `json:"blob"`
+	Proof hexutil.Bytes `json:"proof"`
+}
+
+
 
 // Convert Execution Payload Types
 func ToBeaconExecutableData(pl *ExecutableData) (geth_beacon.ExecutableData, error) {
@@ -214,14 +232,22 @@ func FromBeaconExecutableData(ed *geth_beacon.ExecutableData) (ExecutableData, e
 	}, nil
 }
 
-func ExecutableDataToBlock(ed ExecutableData) (*types.Block, error) {
+func ExecutableDataToBlock(ed ExecutableData, versionedHashes []common.Hash, beaconRoot *common.Hash, requests [][]byte) (*types.Block, error) {
 	gethEd, err := ToBeaconExecutableData(&ed)
 	if err != nil {
 		return nil, err
 	}
-	var versionedHashes []common.Hash
-	if ed.VersionedHashes != nil {
-		versionedHashes = *ed.VersionedHashes
-	}
-	return geth_beacon.ExecutableDataToBlock(gethEd, versionedHashes, ed.ParentBeaconBlockRoot, nil)
+
+	return geth_beacon.ExecutableDataToBlock(gethEd, versionedHashes, beaconRoot, requests)
 }
+
+/*
+// convertHexutilBytesToBytesSlice is a helper function for converting
+func convertHexutilBytesToBytesSlice(input []hexutil.Bytes) [][]byte {
+    sliceOfBytes := make([][]byte, len(input))
+    for i, b := range input {
+        sliceOfBytes[i] = []byte(b)
+    }
+    return sliceOfBytes
+}
+*/

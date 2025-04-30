@@ -1933,4 +1933,6 @@ func init() {
 			BaseSpec: onlyBlobTxsSpec,
 		},
 	)
+
+	fmt.Printf("TOTAL AMOUNT OF TESTS: %v\n", len(Tests))
 }

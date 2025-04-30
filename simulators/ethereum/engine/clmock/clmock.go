@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"math/rand"
 	"sync"
@@ -104,6 +105,7 @@ type CLMocker struct {
 	LatestBlockValue            *big.Int
 	LatestBlobBundle            *typ.BlobsBundle
 	LatestShouldOverrideBuilder *bool
+	LatestRequests 				[][]byte
 	LatestPayloadAttributes     typ.PayloadAttributes
 	LatestExecutedPayload       typ.ExecutableData
 	LatestForkchoice            api.ForkchoiceStateV1
@@ -449,7 +451,7 @@ func (cl *CLMocker) GetNextPayload() {
 	ctx, cancel := context.WithTimeout(cl.TestContext, globals.RPCTimeout)
 	defer cancel()
 	version := cl.ForkConfig.GetPayloadVersion(cl.LatestPayloadAttributes.Timestamp)
-	cl.LatestPayloadBuilt, cl.LatestBlockValue, cl.LatestBlobBundle, cl.LatestShouldOverrideBuilder, err = cl.NextBlockProducer.GetPayload(ctx, version, cl.NextPayloadID)
+	cl.LatestPayloadBuilt, cl.LatestBlockValue, cl.LatestBlobBundle, cl.LatestShouldOverrideBuilder, cl.LatestRequests, err = cl.NextBlockProducer.GetPayload(ctx, version, cl.NextPayloadID)
 
 	if err != nil {
 		cl.Fatalf("CLMocker: Could not getPayload (%v, %v): %v", cl.NextBlockProducer.ID(), cl.NextPayloadID, err)
@@ -470,18 +472,27 @@ func (cl *CLMocker) GetNextPayload() {
 		cl.Fatalf("CLMocker: Incorrect Number on payload built: %v != %v", cl.LatestPayloadBuilt.Number, cl.LatestHeader.Number.Uint64()+1)
 	}
 
-	if cl.IsCancun(cl.LatestPayloadBuilt.Timestamp) {
+	if cl.IsCancun(cl.LatestPayloadBuilt.Timestamp) || cl.IsPrague(cl.LatestPayloadBuilt.Timestamp) {
 		// Check if we have blobs to include in the broadcast
-		if cl.LatestBlobBundle == nil {
-			cl.Fatalf("CLMocker: No blob bundle on cancun")
+		if cl.LatestBlobBundle != nil {
+			// case: there are blobs that we need to broadcast to all clients
+			cl.LatestPayloadBuilt.VersionedHashes, err = cl.LatestBlobBundle.VersionedHashes(cancun.BLOB_COMMITMENT_VERSION_KZG)
+			if err != nil {
+				cl.Fatalf("CLMocker: Could not get versioned hashes from blob bundle: %v", err)
+			}
+		// case: no blobs	
+		} else {
+			if cl.IsCancun(cl.LatestPayloadBuilt.Timestamp) {
+				slog.Info("CLMocker: No blob bundle on cancun")
+			} else {
+				slog.Info("CLMocker: No blob bundle on prague")
+			}
 		}
-		// Broadcast the blob bundle to all clients
-		cl.LatestPayloadBuilt.VersionedHashes, err = cl.LatestBlobBundle.VersionedHashes(cancun.BLOB_COMMITMENT_VERSION_KZG)
-		if err != nil {
-			cl.Fatalf("CLMocker: Could not get versioned hashes from blob bundle: %v", err)
-		}
+
 		cl.LatestPayloadBuilt.ParentBeaconBlockRoot = cl.LatestPayloadAttributes.BeaconRoot
 	}
+
+
 	cl.LatestPayloadBuilt.PayloadAttributes = cl.LatestPayloadAttributes
 }
 
@@ -702,13 +713,13 @@ type ExecutePayloadOutcome struct {
 	Error                  error
 }
 
-func (cl *CLMocker) BroadcastNewPayload(ed *typ.ExecutableData, version int) []ExecutePayloadOutcome {
+func (cl *CLMocker) BroadcastNewPayload(ed *typ.ExecutableData, version int, requests [][]byte, witness bool) []ExecutePayloadOutcome {
 	responses := make([]ExecutePayloadOutcome, len(cl.EngineClients))
 	for i, ec := range cl.EngineClients {
 		responses[i].Container = ec.ID()
 		ctx, cancel := context.WithTimeout(cl.TestContext, globals.RPCTimeout)
 		defer cancel()
-		execPayloadResp, err := ec.NewPayload(ctx, version, ed)
+		execPayloadResp, err := ec.NewPayload(ctx, version, ed, requests, witness)
 		if err != nil {
 			cl.Errorf("CLMocker: Could not ExecutePayloadV1: %v", err)
 			responses[i].Error = err

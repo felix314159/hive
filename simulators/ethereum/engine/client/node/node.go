@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"os"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	beacon "github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -74,7 +76,7 @@ func (s GethNodeEngineStarter) StartGethNode(T *hivesim.T, testContext context.C
 		for i, bootClient := range bootClients {
 			enodes[i], err = bootClient.EnodeURL()
 			if err != nil {
-				return nil, fmt.Errorf("Unable to obtain bootnode: %v", err)
+				return nil, fmt.Errorf("unable to obtain bootnode: %v", err)
 			}
 		}
 	}
@@ -251,7 +253,7 @@ func (n *GethNode) ReOrgBackBlockChain(N uint64, currentBlock *types.Header) (*t
 	for ; N > 0; N-- {
 		currentBlock = n.eth.BlockChain().GetHeaderByHash(currentBlock.ParentHash)
 		if currentBlock == nil {
-			return nil, fmt.Errorf("Unable to re-org back")
+			return nil, fmt.Errorf("unable to re-org back")
 		}
 	}
 
@@ -344,9 +346,12 @@ func encodeBlockNumber(number uint64) []byte {
 }
 
 func (n *GethNode) SetBlock(block *types.Block, parentNumber uint64, parentRoot common.Hash) error {
-	parentTd := n.eth.BlockChain().GetTd(block.ParentHash(), block.NumberU64()-1)
 	db := n.eth.ChainDb()
-	rawdb.WriteTd(db, block.Hash(), block.NumberU64(), parentTd.Add(parentTd, block.Difficulty()))
+
+	// TODO: is it safe to remove below?
+	// parentTd := n.eth.BlockChain().GetTd(block.ParentHash(), block.NumberU64()-1)
+	//rawdb.WriteTd(db, block.Hash(), block.NumberU64(), parentTd.Add(parentTd, block.Difficulty()))
+	
 	rawdb.WriteBlock(db, block)
 
 	// write real info (fixes fake number test)
@@ -375,7 +380,7 @@ func (n *GethNode) SetBlock(block *types.Block, parentNumber uint64, parentRoot 
 	} else {
 		rawdb.WriteReceipts(db, block.Hash(), block.NumberU64(), result.Receipts)
 	}
-	root, err := statedb.Commit(block.NumberU64(), false)
+	root, err := statedb.Commit(block.NumberU64(), false, false)
 	if err != nil {
 		return errors.Wrap(err, "failed to commit state")
 	}
@@ -412,14 +417,16 @@ func (n *GethNode) SetBlock(block *types.Block, parentNumber uint64, parentRoot 
 }
 
 // Engine API
-func (n *GethNode) NewPayload(ctx context.Context, version int, pl *typ.ExecutableData) (beacon.PayloadStatusV1, error) {
+func (n *GethNode) NewPayload(ctx context.Context, version int, pl *typ.ExecutableData, requests [][]byte, witness bool) (beacon.PayloadStatusV1, error) {
 	switch version {
 	case 1:
 		return n.NewPayloadV1(ctx, pl)
 	case 2:
 		return n.NewPayloadV2(ctx, pl)
 	case 3:
-		return n.NewPayloadV3(ctx, pl)
+		return n.NewPayloadV3(ctx, pl, *pl.VersionedHashes, pl.ParentBeaconBlockRoot)
+	case 4:
+		return n.NewPayloadV4(ctx, pl, *pl.VersionedHashes, pl.ParentBeaconBlockRoot, requests)
 	}
 	return beacon.PayloadStatusV1{}, fmt.Errorf("unknown version %d", version)
 }
@@ -446,8 +453,12 @@ func (n *GethNode) NewPayloadV2(ctx context.Context, pl *typ.ExecutableData) (be
 	return resp, err
 }
 
-func (n *GethNode) NewPayloadV3(ctx context.Context, pl *typ.ExecutableData) (beacon.PayloadStatusV1, error) {
+func (n *GethNode) NewPayloadV3(ctx context.Context, pl *typ.ExecutableData, versionedHashes []common.Hash, beaconRoot *common.Hash, ) (beacon.PayloadStatusV1, error) {
+	pl.VersionedHashes = &versionedHashes
+	pl.ParentBeaconBlockRoot = beaconRoot
+
 	n.latestPayloadSent = pl
+
 	ed, err := typ.ToBeaconExecutableData(pl)
 	if err != nil {
 		return beacon.PayloadStatusV1{}, err
@@ -458,6 +469,37 @@ func (n *GethNode) NewPayloadV3(ctx context.Context, pl *typ.ExecutableData) (be
 	resp, err := n.api.NewPayloadV3(ed, *pl.VersionedHashes, pl.ParentBeaconBlockRoot)
 	n.latestPayloadStatusReponse = &resp
 	return resp, err
+}
+
+func (n *GethNode) NewPayloadV4(ctx context.Context, pl *typ.ExecutableData, versionedHashes []common.Hash, beaconRoot *common.Hash, requests [][]byte) (beacon.PayloadStatusV1, error) {
+	pl.VersionedHashes = &versionedHashes
+	pl.ParentBeaconBlockRoot = beaconRoot
+	
+	n.latestPayloadSent = pl
+
+	ed, err := typ.ToBeaconExecutableData(pl)
+	if err != nil {
+		return beacon.PayloadStatusV1{}, err
+	}
+	if pl.VersionedHashes == nil {
+		return beacon.PayloadStatusV1{}, fmt.Errorf("versioned hashes are nil")
+	}
+	if pl.ParentBeaconBlockRoot == nil {
+		return beacon.PayloadStatusV1{}, fmt.Errorf("parent beacon block root is nil")
+	}
+
+	resp, err := n.api.NewPayloadV4(ed, *pl.VersionedHashes, pl.ParentBeaconBlockRoot, ConvertToHexutilBytes(requests))
+	n.latestPayloadStatusReponse = &resp
+	return resp, err
+}
+
+// takes [][]byte and returns it as []hexutil.Bytes
+func ConvertToHexutilBytes(input [][]byte) []hexutil.Bytes {
+	result := make([]hexutil.Bytes, len(input))
+	for i, b := range input {
+		result[i] = hexutil.Bytes(b)
+	}
+	return result
 }
 
 func (n *GethNode) ForkchoiceUpdated(ctx context.Context, version int, fcs *beacon.ForkchoiceStateV1, payload *typ.PayloadAttributes) (beacon.ForkChoiceResponse, error) {
@@ -540,19 +582,53 @@ func (n *GethNode) GetPayloadV3(ctx context.Context, payloadId *beacon.PayloadID
 	return ed, p.BlockValue, blobsBundle, &p.Override, err
 }
 
-func (n *GethNode) GetPayload(ctx context.Context, version int, payloadId *beacon.PayloadID) (typ.ExecutableData, *big.Int, *typ.BlobsBundle, *bool, error) {
+func (n *GethNode) GetPayloadV4(ctx context.Context, payloadId *beacon.PayloadID) (typ.ExecutableData, *big.Int, *typ.BlobsBundle, *bool, [][]byte, error) {
+	p, err := n.api.GetPayloadV4(*payloadId)
+	if p == nil {
+		slog.Warn("DEBUG ABC: p (return value of GetPayloadV4()) equals nil")
+		return typ.ExecutableData{}, nil, nil, nil, nil, err
+	}
+	if err != nil {
+		slog.Warn(fmt.Sprintf("DEBUG ABC: GetPayloadV4() returned this error: %v", err))
+		return typ.ExecutableData{}, nil, nil, nil, nil, err
+	}
+	ed, err := typ.FromBeaconExecutableData(p.ExecutionPayload)
+	if err != nil {
+		slog.Warn(fmt.Sprintf("DEBUG ABC: FromBeaconExecutableData() returned this error: %v", err))
+		return typ.ExecutableData{}, nil, nil, nil, nil, err
+	}
+
+	blobsBundle := &typ.BlobsBundle{}
+	err = blobsBundle.FromBeaconBlobsBundle(p.BlobsBundle)
+	if err != nil {
+		slog.Warn(fmt.Sprintf("DEBUG ABC: FromBeaconBlobsBundle() returned this error: %v", err))
+		return typ.ExecutableData{}, nil, nil, nil, nil, err
+	}
+
+	if len(blobsBundle.Blobs) == 0 {
+		slog.Warn("DEBUG ABC: Detected empty blob slice")
+	}
+
+	return ed, p.BlockValue, blobsBundle, &p.Override, p.Requests, err
+}
+
+func (n *GethNode) GetPayload(ctx context.Context, version int, payloadId *beacon.PayloadID) (typ.ExecutableData, *big.Int, *typ.BlobsBundle, *bool, [][]byte, error) {
 
 	switch version {
 	case 1:
 		ed, err := n.GetPayloadV1(ctx, payloadId)
-		return ed, nil, nil, nil, err
+		return ed, nil, nil, nil, nil, err
 	case 2:
 		ed, value, err := n.GetPayloadV2(ctx, payloadId)
-		return ed, value, nil, nil, err
+		return ed, value, nil, nil, nil, err
 	case 3:
-		return n.GetPayloadV3(ctx, payloadId)
+		ed, value, blobsBundle, override, err := n.GetPayloadV3(ctx, payloadId)
+		return ed, value, blobsBundle, override, nil, err
+	case 4:
+		return n.GetPayloadV4(ctx, payloadId)
 	default:
-		return typ.ExecutableData{}, nil, nil, nil, fmt.Errorf("unknown version %d", version)
+		slog.Warn(fmt.Sprintf("DEBUG: GetPayload() got an unknown version: %d", version))
+		return typ.ExecutableData{}, nil, nil, nil, nil, fmt.Errorf("unknown version %d", version)
 	}
 }
 

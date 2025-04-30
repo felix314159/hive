@@ -269,10 +269,10 @@ func (tec *TestEngineClient) TestEngineNewPayloadV2(payload *typ.ExecutableData)
 	return ret
 }
 
-func (tec *TestEngineClient) TestEngineNewPayloadV3(payload *typ.ExecutableData) *NewPayloadResponseExpectObject {
+func (tec *TestEngineClient) TestEngineNewPayloadV3(payload *typ.ExecutableData, versionedHashes []common.Hash, beaconRoot *common.Hash) *NewPayloadResponseExpectObject {
 	ctx, cancel := context.WithTimeout(tec.TestContext, globals.RPCTimeout)
 	defer cancel()
-	status, err := tec.Engine.NewPayloadV3(ctx, payload)
+	status, err := tec.Engine.NewPayloadV3(ctx, payload, versionedHashes, beaconRoot)
 	ret := &NewPayloadResponseExpectObject{
 		ExpectEnv: &ExpectEnv{Env: tec.Env},
 		Payload:   payload,
@@ -286,13 +286,34 @@ func (tec *TestEngineClient) TestEngineNewPayloadV3(payload *typ.ExecutableData)
 	return ret
 }
 
+func (tec *TestEngineClient) TestEngineNewPayloadV4(payload *typ.ExecutableData, versionedHashes []common.Hash, beaconRoot *common.Hash, requests [][]byte) *NewPayloadResponseExpectObject {
+	ctx, cancel := context.WithTimeout(tec.TestContext, globals.RPCTimeout)
+	defer cancel()
+	status, err := tec.Engine.NewPayloadV4(ctx, payload, versionedHashes, beaconRoot, requests)
+	ret := &NewPayloadResponseExpectObject{
+		ExpectEnv: &ExpectEnv{Env: tec.Env},
+		Payload:   payload,
+		Status:    status,
+		Version:   4,
+		Error:     err,
+	}
+	if err, ok := err.(rpc.Error); ok {
+		ret.ErrorCode = err.ErrorCode()
+	}
+	return ret
+}
+
 func (tec *TestEngineClient) TestEngineNewPayload(payload *typ.ExecutableData) *NewPayloadResponseExpectObject {
 	if payload == nil {
 		panic("Payload is nil")
 	}
 	version := tec.EngineAPIVersionResolver.NewPayloadVersion(payload.Timestamp)
-	if version == 3 {
-		return tec.TestEngineNewPayloadV3(payload)
+	if version == 4 {
+		//return tec.TestEngineNewPayloadV4(payload, *payload.VersionedHashes, payload.ParentBeaconBlockRoot, requests)
+		// TODO: since requests should have been passed separately what to do here?
+		fmt.Println("can't create payloadv4 cuz requests not passed to this function")
+	} else if version == 3 {
+		return tec.TestEngineNewPayloadV3(payload, *payload.VersionedHashes, payload.ParentBeaconBlockRoot)
 	} else if version == 2 {
 		return tec.TestEngineNewPayloadV2(payload)
 	} else if version == 1 {
@@ -426,7 +447,7 @@ func (tec *TestEngineClient) TestEngineGetPayload(payloadID *api.PayloadID, payl
 	version := tec.EngineAPIVersionResolver.GetPayloadVersion(payloadAttributes.Timestamp)
 	ctx, cancel := context.WithTimeout(tec.TestContext, globals.RPCTimeout)
 	defer cancel()
-	payload, blockValue, blobBundle, shouldOverride, err := tec.Engine.GetPayload(ctx, version, payloadID)
+	payload, blockValue, blobBundle, shouldOverride, _,  err := tec.Engine.GetPayload(ctx, version, payloadID)
 	if blobBundle != nil {
 		payload.VersionedHashes, err = blobBundle.VersionedHashes(cancun.BLOB_COMMITMENT_VERSION_KZG)
 		if err != nil {
